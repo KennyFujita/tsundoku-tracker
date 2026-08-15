@@ -592,6 +592,17 @@
     el.className = "lookup-note" + (kind ? " " + kind : "");
   }
 
+  // openBD は「著者,名,生没年」という図書館の典拠形で返してくる
+  // （例: 三浦,宏文,1938-2020）。人名として読める形に均す。
+  function tidyAuthor(s) {
+    return String(s || "")
+      .replace(/,?\s*\d{4}-(\d{4})?/g, "")   // 生没年を落とす
+      .replace(/,\s*/g, " ")                 // 姓,名 → 姓 名
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  // 新刊に強い。JPRO に発売前から登録されるため、出たばかりの本はここでしか拾えない。
   async function fromOpenBD(isbn) {
     const r = await fetch(`https://api.openbd.jp/v1/get?isbn=${encodeURIComponent(isbn)}`);
     if (!r.ok) throw new Error("openBD");
@@ -605,9 +616,41 @@
       const p = ext.find(e => e.ExtentUnit === "03" && Number(e.ExtentValue) > 0);
       if (p) pages = Number(p.ExtentValue);
     }
-    return { title: s.title || "", author: s.author || "", pages };
+    return { title: s.title || "", author: tidyAuthor(s.author), pages };
   }
 
+  // 国立国会図書館サーチ（SRU）。納本制度があるので収録が厚く、著者が自然な表記で、
+  // dcterms:extent から総ページ数が取れる唯一の実用的な取得先。
+  // ただし新刊は目録作成のラグで載っていない。同時アクセス制限があるので1回だけ待って再試行する。
+  async function fromNDL(isbn, retry = true) {
+    const url = "https://ndlsearch.ndl.go.jp/api/sru?operation=searchRetrieve"
+              + "&maximumRecords=1&recordSchema=dcndl&query=isbn%3D" + encodeURIComponent(isbn);
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("NDL");
+    const text = await r.text();
+    if (text.includes("Too Many")) {
+      if (!retry) throw new Error("NDL busy");
+      await new Promise(res => setTimeout(res, 2000));
+      return fromNDL(isbn, false);
+    }
+    // SRU は recordData の中身をエスケープして返すので、2段階で解く
+    const outer = new DOMParser().parseFromString(text, "application/xml");
+    const rd = outer.getElementsByTagName("recordData")[0];
+    if (!rd) return null;
+    const doc = new DOMParser().parseFromString(rd.textContent, "application/xml");
+    const first = t => doc.getElementsByTagName(t)[0]?.textContent?.trim() || "";
+
+    const creators = [...doc.getElementsByTagName("dc:creator")]
+      .map(e => e.textContent.trim()).filter(Boolean);
+    const m = first("dcterms:extent").match(/(\d+)\s*p/);   // 例: "237p ; 21cm"
+    return {
+      title: first("dcterms:title"),
+      author: creators.join("、"),
+      pages: m ? Number(m[1]) : 0
+    };
+  }
+
+  // 洋書の受け皿。キー無しだと共有クォータですぐ 429 になるので当てにはしない。
   async function fromGoogleBooks(isbn) {
     const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`);
     if (!r.ok) throw new Error("Google Books");
@@ -630,34 +673,70 @@
     if (dup) { setLookupNote(`「${dup.title}」として登録済みです。`, "err"); return; }
 
     $("lookup").disabled = true;
-    setLookupNote("調べています…");
 
-    let found = { title: "", author: "", pages: 0 };
-    try { Object.assign(found, (await fromOpenBD(isbn)) || {}); } catch (e) { /* 次を試す */ }
+    // 3つは得意分野が違うので順に引いて、欠けている項目だけを埋めていく。
+    //   openBD  … 新刊に強い。著者は典拠形なので整形が要る
+    //   国会図書館 … 著者が自然な表記で、ページ数が取れる唯一の実用的な取得先
+    //   Google  … 洋書の受け皿
+    const found = { title: "", author: "", pages: 0 };
+    const from = [];
+
+    setLookupNote("openBD を調べています…");
+    try {
+      const o = await fromOpenBD(isbn);
+      if (o && o.title) {
+        found.title = o.title;
+        found.author = o.author;
+        found.pages = o.pages;
+        from.push("openBD");
+      }
+    } catch (e) { /* 次を試す */ }
+
+    setLookupNote("国立国会図書館を調べています…");
+    try {
+      const n = await fromNDL(isbn);
+      if (n && n.title) {
+        found.title = n.title;
+        if (n.author) found.author = n.author;   // openBD の典拠形より読みやすいので上書き
+        if (n.pages)  found.pages  = n.pages;
+        from.push("国立国会図書館");
+      }
+    } catch (e) { /* 次を試す */ }
+
     if (!found.title || !found.pages) {
+      setLookupNote("Google Books を調べています…");
       try {
-        const g = (await fromGoogleBooks(isbn)) || {};
-        found.title  = found.title  || g.title  || "";
-        found.author = found.author || g.author || "";
-        found.pages  = found.pages  || g.pages  || 0;
+        const g = await fromGoogleBooks(isbn);
+        if (g && g.title) {
+          found.title  = found.title  || g.title;
+          found.author = found.author || g.author;
+          found.pages  = found.pages  || g.pages;
+          from.push("Google Books");
+        }
       } catch (e) { /* 手入力に倒す */ }
     }
     $("lookup").disabled = false;
 
     if (!found.title) {
-      setLookupNote("見つかりませんでした。下の欄に手で入力してください。", "err");
+      setLookupNote("openBD・国立国会図書館・Google Books のいずれにも見つかりませんでした。下の欄に手で入力してください。", "err");
       $("f-title").focus();
       return;
     }
+
     $("f-title").value = found.title;
     if (found.author) $("f-author").value = found.author;
-    if (found.pages) {
-      $("f-pages").value = found.pages;
-      setLookupNote(`「${found.title}」が見つかりました。`, "ok");
+    if (found.pages) $("f-pages").value = found.pages;
+
+    // どこから何が取れたかを出す。取れなかったときに原因を切り分けられるようにするため。
+    const missing = [];
+    if (!found.author) missing.push("著者");
+    if (!found.pages)  missing.push("総ページ数");
+    const src = `${from.join("・")}から取得`;
+    if (missing.length) {
+      setLookupNote(`「${found.title}」（${src}）。${missing.join("と")}は手で入れてください。`, "ok");
+      (found.pages ? $("f-author") : $("f-pages")).focus();
     } else {
-      // 書誌データにページ数が入っていることは少ない。ここは手入力が基本。
-      setLookupNote(`「${found.title}」が見つかりました。あとは総ページ数だけ入れてください。`, "ok");
-      $("f-pages").focus();
+      setLookupNote(`「${found.title}」（${src}）`, "ok");
     }
   }
 
