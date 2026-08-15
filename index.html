@@ -28,6 +28,11 @@
     --warn:       #A34F26;
     --shadow:     0 1px 0 rgba(26,36,34,.05), 0 6px 20px -14px rgba(26,36,34,.5);
 
+    /* 分類グラフ用。背表紙の装丁色は暗く彩度が低いため隣り合う扇を見分けられず
+       （検証で最悪ペア ΔE 2.5）、グラフには使えない。ここは検証を通した別配色。 */
+    --cat-1: #2a78d6; --cat-2: #eb6834; --cat-3: #1baf7a;
+    --cat-4: #eda100; --cat-5: #e87ba4; --cat-other: #898781;
+
     --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium", "Yu Gothic", system-ui, sans-serif;
     --mincho: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Iowan Old Style", Palatino, serif;
     --mono: "SF Mono", "SFMono-Regular", Menlo, "Osaka-Mono", monospace;
@@ -38,6 +43,8 @@
       --ink: #E3E8E4; --ink-2: #A2ACA7; --ink-3: #6E7873;
       --accent: #D9A544; --accent-dim: rgba(217,165,68,.16);
       --good: #74A98A; --warn: #D0794A;
+      --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70;
+      --cat-4: #c98500; --cat-5: #d55181; --cat-other: #898781;
       --shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 24px -16px #000;
     }
   }
@@ -46,6 +53,8 @@
     --ink: #1A2422; --ink-2: #4E5955; --ink-3: #7E8882;
     --accent: #9A6A22; --accent-dim: rgba(154,106,34,.14);
     --good: #45735A; --warn: #A34F26;
+    --cat-1: #2a78d6; --cat-2: #eb6834; --cat-3: #1baf7a;
+    --cat-4: #eda100; --cat-5: #e87ba4; --cat-other: #898781;
     --shadow: 0 1px 0 rgba(26,36,34,.05), 0 6px 20px -14px rgba(26,36,34,.5);
   }
   :root[data-theme="dark"] {
@@ -53,6 +62,8 @@
     --ink: #E3E8E4; --ink-2: #A2ACA7; --ink-3: #6E7873;
     --accent: #D9A544; --accent-dim: rgba(217,165,68,.16);
     --good: #74A98A; --warn: #D0794A;
+    --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70;
+    --cat-4: #c98500; --cat-5: #d55181; --cat-other: #898781;
     --shadow: 0 1px 0 rgba(0,0,0,.3), 0 8px 24px -16px #000;
   }
 
@@ -274,6 +285,63 @@
     background: var(--accent-dim); border-radius: 3px;
   }
   .sample-bar[hidden] { display: none; }
+
+  /* ---- 分類の内訳 ---- */
+  .genres {
+    display: flex; flex-direction: column; gap: 20px;
+    padding: 24px 26px;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 3px; box-shadow: var(--shadow);
+  }
+  .genres[hidden] { display: none; }
+  .genres-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .genres-head h2 {
+    font-family: var(--mincho); font-size: 17px; font-weight: 600;
+    letter-spacing: .1em; margin: 0;
+  }
+
+  .genres-body { display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: center; }
+  @media (max-width: 660px) { .genres-body { grid-template-columns: 1fr; gap: 20px; } }
+
+  .donut-wrap { position: relative; width: 200px; justify-self: center; }
+  .donut-wrap svg { display: block; width: 100%; height: auto; }
+  .donut-seg { transition: opacity .15s ease; cursor: default; }
+  .donut-wrap[data-hover="on"] .donut-seg { opacity: .35; }
+  .donut-wrap[data-hover="on"] .donut-seg.is-hot { opacity: 1; }
+  .donut-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; pointer-events: none; padding: 0 34px;
+  }
+  .donut-center .big { font-size: 27px; line-height: 1.1; }
+  .donut-center .cap { font-size: 11px; color: var(--ink-3); letter-spacing: .06em; margin-top: 2px; }
+
+  .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .legend li { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+  .legend .chip { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+  .legend .nm { flex: 1 1 auto; min-width: 0; }
+  .legend .ct {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 12.5px; color: var(--ink-2);
+  }
+  .legend .pc { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ink-3); width: 3.4em; text-align: right; }
+
+  .table-view > summary {
+    list-style: none; cursor: pointer; font-size: 12.5px; color: var(--ink-3);
+  }
+  .table-view > summary::-webkit-details-marker { display: none; }
+  .table-view > summary::before { content: "▸ "; }
+  .table-view[open] > summary::before { content: "▾ "; }
+  .table-view table { border-collapse: collapse; margin-top: 10px; font-size: 13px; width: 100%; max-width: 420px; }
+  .table-view th, .table-view td { text-align: left; padding: 4px 12px 4px 0; border-bottom: 1px solid var(--rule); }
+  .table-view th { font-weight: 400; font-size: 11px; letter-spacing: .08em; color: var(--ink-3); }
+  .table-view td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+
+  .unclassified { display: flex; flex-direction: column; gap: 9px; font-size: 12.5px; }
+  .unclassified[hidden] { display: none; }
+  .unclassified .uc-head { color: var(--ink-3); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .unclassified .uc-row { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+  .unclassified .uc-row .t { font-family: var(--mincho); font-size: 14px; }
 </style>
 </head>
 <body>
@@ -357,6 +425,31 @@
   </p>
 
   <div class="shelf" id="shelf"></div>
+
+  <section class="genres" id="genres" hidden>
+    <div class="genres-head">
+      <h2>分類の内訳</h2>
+      <div class="tabs" role="tablist" id="genre-tabs">
+        <button class="tab" role="tab" data-group="done" aria-selected="true">読んだ本</button>
+        <button class="tab" role="tab" data-group="todo" aria-selected="false">これから読む本</button>
+      </div>
+    </div>
+
+    <div class="genres-body">
+      <div class="donut-wrap" id="donut-wrap">
+        <svg id="donut" viewBox="0 0 200 200" role="img" aria-label="分類ごとの冊数の割合"></svg>
+        <div class="donut-center" id="donut-center"></div>
+      </div>
+      <ul class="legend" id="legend"></ul>
+    </div>
+
+    <details class="table-view">
+      <summary>表で見る</summary>
+      <table id="genre-table"></table>
+    </details>
+
+    <div class="unclassified" id="unclassified" hidden></div>
+  </section>
 
   <div class="footer">
     <span class="note" id="save-note"></span>
@@ -585,8 +678,158 @@
   }
 
   function render() {
-    renderFigures(); renderPile(); renderTabs(); renderShelf();
+    renderFigures(); renderPile(); renderTabs(); renderShelf(); renderGenres();
     $("sample-bar").hidden = !books.some(b => b.sample);
+  }
+
+  /* ---------- 分類の内訳 ---------- */
+  // NDC（日本十進分類法）の第1桁がそのまま大分類になる。
+  const NDC_CLASS = {
+    "0": "総記", "1": "哲学", "2": "歴史", "3": "社会科学", "4": "自然科学",
+    "5": "技術", "6": "産業", "7": "芸術", "8": "言語", "9": "文学"
+  };
+  const CAT_VARS = ["--cat-1", "--cat-2", "--cat-3", "--cat-4", "--cat-5"];
+  let genreGroup = "done";
+
+  const genreOf = b => b.genre || NDC_CLASS[String(b.ndc || "")[0]] || "";
+  const inGroup = (b, g) => g === "done" ? b.status === "done" : b.status !== "done";
+
+  // 上位5分類 ＋ 「その他」。円は6区分までが読める限界なので、
+  // 6色目を作らずに残りをまとめる。
+  function genreCounts(group) {
+    const tally = new Map();
+    for (const b of books) {
+      if (!inGroup(b, group)) continue;
+      const g = genreOf(b);
+      if (!g) continue;
+      tally.set(g, (tally.get(g) || 0) + 1);
+    }
+    const sorted = [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
+    const top = sorted.slice(0, 5).map(([name, n], i) => ({ name, n, color: `var(${CAT_VARS[i]})` }));
+    const restN = sorted.slice(5).reduce((a, [, n]) => a + n, 0);
+    if (restN) top.push({ name: "その他", n: restN, color: "var(--cat-other)" });
+    return top;
+  }
+
+  function renderDonut(slices, total) {
+    const R = 70, W = 26, C = 2 * Math.PI * R;
+    const GAP = slices.length > 1 ? 2 : 0;   // 1区分のときは切れ目を入れない
+    let at = 0;
+    const segs = slices.map((s, i) => {
+      const len = Math.max(0, (s.n / total) * C - GAP);   // 2px の隙間で扇を分ける
+      const el = `<circle class="donut-seg" data-i="${i}" r="${R}" cx="100" cy="100"
+        fill="none" stroke="${s.color}" stroke-width="${W}"
+        stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}"
+        stroke-dashoffset="${(-at).toFixed(2)}"><title>${esc(s.name)} ${s.n}冊</title></circle>`;
+      at += (s.n / total) * C;
+      return el;
+    }).join("");
+    $("donut").innerHTML = `<g transform="rotate(-90 100 100)">${segs}</g>`;
+  }
+
+  function donutCenter(label, value, caption) {
+    $("donut-center").innerHTML = label
+      ? `<span class="cap">${esc(label)}</span><span class="big">${value}</span><span class="cap">${caption}</span>`
+      : `<span class="big">${value}</span><span class="cap">${caption}</span>`;
+  }
+
+  function renderGenres() {
+    const slices = genreCounts(genreGroup);
+    const total = slices.reduce((a, s) => a + s.n, 0);
+    const unclassified = books.filter(b => inGroup(b, genreGroup) && !genreOf(b));
+
+    // 分類が付いた本が1冊も無ければ、節ごと出さない
+    $("genres").hidden = !books.some(b => genreOf(b)) && !books.some(b => b.isbn);
+    if ($("genres").hidden) return;
+
+    for (const t of $("genre-tabs").children) {
+      t.setAttribute("aria-selected", String(t.dataset.group === genreGroup));
+    }
+
+    if (!total) {
+      $("donut").innerHTML = `<circle r="70" cx="100" cy="100" fill="none"
+        stroke="var(--surface-2)" stroke-width="26"></circle>`;
+      donutCenter("", "—", "分類なし");
+      $("legend").innerHTML = `<li style="color:var(--ink-3)">分類の付いた本がまだありません。</li>`;
+      $("genre-table").innerHTML = "";
+    } else {
+      renderDonut(slices, total);
+      donutCenter("", total, genreGroup === "done" ? "冊 読了" : "冊 これから");
+
+      const pct = n => (n / total * 100);
+      $("legend").innerHTML = slices.map((s, i) => `
+        <li data-i="${i}">
+          <span class="chip" style="background:${s.color}"></span>
+          <span class="nm">${esc(s.name)}</span>
+          <span class="ct">${s.n}冊</span>
+          <span class="pc">${pct(s.n).toFixed(0)}%</span>
+        </li>`).join("");
+
+      // 表は色に頼らず値を読むための控え（明色は背景とのコントラストが低いため必須）
+      $("genre-table").innerHTML =
+        `<thead><tr><th>分類</th><th>冊数</th><th>割合</th></tr></thead><tbody>` +
+        slices.map(s => `<tr><td>${esc(s.name)}</td><td class="num">${s.n}</td>
+          <td class="num">${pct(s.n).toFixed(1)}%</td></tr>`).join("") +
+        `</tbody>`;
+    }
+
+    // 分類が付いていない本。ISBN があるものは取り込みで、無いものは手で選ぶ。
+    const fetchable = unclassified.filter(b => b.isbn).length;
+    $("unclassified").hidden = !unclassified.length;
+    if (unclassified.length) {
+      const opts = ["", ...Object.values(NDC_CLASS)];
+      $("unclassified").innerHTML = `
+        <div class="uc-head">
+          <span>分類が付いていない本が ${unclassified.length} 冊あります。</span>
+          ${fetchable ? `<button type="button" id="fetch-ndc">国立国会図書館から取り込む（${fetchable}冊）</button>` : ""}
+        </div>` +
+        unclassified.map(b => `
+          <div class="uc-row" data-id="${b.id}">
+            <span class="t">${esc(b.title)}</span>
+            <select class="sel js-genre" aria-label="${esc(b.title)}の分類">
+              ${opts.map(o => `<option value="${o}">${o || "分類を選ぶ"}</option>`).join("")}
+            </select>
+          </div>`).join("");
+    }
+  }
+
+  // ホバーで該当の扇だけ残し、中央に内訳を出す（値は凡例と表にも出ているので補助）
+  function hotGenre(i) {
+    const wrap = $("donut-wrap");
+    const segs = [...$("donut").querySelectorAll(".donut-seg")];
+    if (i == null) {
+      wrap.dataset.hover = "off";
+      segs.forEach(s => s.classList.remove("is-hot"));
+      const slices = genreCounts(genreGroup);
+      const total = slices.reduce((a, s) => a + s.n, 0);
+      if (total) donutCenter("", total, genreGroup === "done" ? "冊 読了" : "冊 これから");
+      return;
+    }
+    const slices = genreCounts(genreGroup);
+    const total = slices.reduce((a, s) => a + s.n, 0);
+    const s = slices[i];
+    if (!s) return;
+    wrap.dataset.hover = "on";
+    segs.forEach(x => x.classList.toggle("is-hot", Number(x.dataset.i) === i));
+    donutCenter(s.name, s.n, `冊 / ${(s.n / total * 100).toFixed(0)}%`);
+  }
+
+  // 既に登録済みの本の分類を後から取り込む。NDL は同時アクセス制限があるので1冊ずつ待つ。
+  async function fetchMissingNDC(btn) {
+    const targets = books.filter(b => b.isbn && !genreOf(b));
+    btn.disabled = true;
+    let ok = 0;
+    for (let i = 0; i < targets.length; i++) {
+      btn.textContent = `取り込み中… ${i + 1} / ${targets.length}`;
+      try {
+        const n = await fromNDL(normalizeISBN(targets[i].isbn));
+        if (n && n.ndc) { targets[i].ndc = n.ndc; ok++; }
+      } catch (e) { /* 取れないものは手で選んでもらう */ }
+      if (i < targets.length - 1) await new Promise(r => setTimeout(r, 1500));
+    }
+    save(); render();
+    const left = books.filter(b => !genreOf(b)).length;
+    note(`分類を ${ok} 冊分取り込みました。${left ? `残り ${left} 冊は手で選んでください。` : ""}`);
   }
 
   /* ---------- サンプル ---------- */
@@ -596,19 +839,19 @@
     const d = n => shiftDays(today(), n);
     const now = new Date().toISOString();
     books.push(
-      { id: "sample-a", title: "思考の整理学", author: "外山滋比古", isbn: "", pages: 223,
+      { id: "sample-a", title: "思考の整理学", ndc: "141.5", author: "外山滋比古", isbn: "", pages: 223,
         current: 0, status: "stack", due: "", added: now, finished: null,
         log: [{ date: d(-18), page: 0 }], sample: true },
 
-      { id: "sample-b", title: "ゲーデル、エッシャー、バッハ", author: "ダグラス・ホフスタッター", isbn: "", pages: 768,
+      { id: "sample-b", title: "ゲーデル、エッシャー、バッハ", ndc: "007.1", author: "ダグラス・ホフスタッター", isbn: "", pages: 768,
         current: 0, status: "stack", due: "", added: now, finished: null,
         log: [{ date: d(-30), page: 0 }], sample: true },
 
-      { id: "sample-c", title: "銃・病原菌・鉄 上", author: "ジャレド・ダイアモンド", isbn: "", pages: 415,
+      { id: "sample-c", title: "銃・病原菌・鉄 上", ndc: "209", author: "ジャレド・ダイアモンド", isbn: "", pages: 415,
         current: 180, status: "reading", due: d(8), added: now, finished: null,
         log: [{ date: d(-12), page: 0 }, { date: d(-6), page: 90 }, { date: d(0), page: 180 }], sample: true },
 
-      { id: "sample-d", title: "夜と霧", author: "ヴィクトール・E・フランクル", isbn: "", pages: 169,
+      { id: "sample-d", title: "夜と霧", ndc: "946", author: "ヴィクトール・E・フランクル", isbn: "", pages: 169,
         current: 169, status: "done", due: "", added: now, finished: d(-2),
         log: [{ date: d(-9), page: 0 }, { date: d(-2), page: 169 }], sample: true }
     );
@@ -636,6 +879,9 @@
 
   /* ---------- ISBN 検索 ---------- */
   const normalizeISBN = s => String(s).replace(/[^0-9Xx]/g, "").toUpperCase();
+
+  // 直前の検索で取れた NDC。入力欄を持たないのでここで預かり、登録時に本へ移す。
+  let pendingNDC = "";
 
   function setLookupNote(msg, kind) {
     const el = $("lookup-note");
@@ -698,10 +944,20 @@
     const creators = [...doc.getElementsByTagName("dc:creator")]
       .map(e => e.textContent.trim()).filter(Boolean);
     const m = first("dcterms:extent").match(/(\d+)\s*p/);   // 例: "237p ; 21cm"
+
+    // NDC（日本十進分類法）。dcterms:subject の rdf:resource に
+    // http://id.ndl.go.jp/class/ndc9/548.31 の形で入っている。
+    // 分類が取れるのはここだけで、openBD の Cコードは常に空だった。
+    const ndcUrl = [...doc.getElementsByTagName("dcterms:subject")]
+      .map(e => e.getAttribute("rdf:resource") || "")
+      .find(v => /class\/ndc\d*\//.test(v)) || "";
+    const ndc = (ndcUrl.match(/class\/ndc\d*\/([\d.]+)/) || [])[1] || "";
+
     return {
       title: first("dcterms:title"),
       author: creators.join("、"),
-      pages: m ? Number(m[1]) : 0
+      pages: m ? Number(m[1]) : 0,
+      ndc
     };
   }
 
@@ -733,7 +989,7 @@
     //   openBD  … 新刊に強い。著者は典拠形なので整形が要る
     //   国会図書館 … 著者が自然な表記で、ページ数が取れる唯一の実用的な取得先
     //   Google  … 洋書の受け皿
-    const found = { title: "", author: "", pages: 0 };
+    const found = { title: "", author: "", pages: 0, ndc: "" };
     const from = [];
 
     setLookupNote("openBD を調べています…");
@@ -754,6 +1010,7 @@
         found.title = n.title;
         if (n.author) found.author = n.author;   // openBD の典拠形より読みやすいので上書き
         if (n.pages)  found.pages  = n.pages;
+        if (n.ndc)    found.ndc    = n.ndc;
         from.push("国立国会図書館");
       }
     } catch (e) { /* 次を試す */ }
@@ -781,6 +1038,7 @@
     $("f-title").value = found.title;
     if (found.author) $("f-author").value = found.author;
     if (found.pages) $("f-pages").value = found.pages;
+    pendingNDC = found.ndc;
 
     // どこから何が取れたかを出す。取れなかったときに原因を切り分けられるようにするため。
     const missing = [];
@@ -874,6 +1132,8 @@
       title,
       author: $("f-author").value.trim(),
       isbn: normalizeISBN($("f-isbn").value) || "",
+      ndc: pendingNDC,
+      genre: "",
       pages,
       current: 0,
       status: "stack",
@@ -884,6 +1144,7 @@
     });
     e.target.reset();
     $("f-isbn").value = "";
+    pendingNDC = "";
     setLookupNote("");
     $("f-isbn").focus();
     save(); render();
@@ -902,6 +1163,39 @@
   });
 
   $("sort").addEventListener("change", renderShelf);
+
+  /* ---------- 分類グラフの操作 ---------- */
+  $("genre-tabs").addEventListener("click", e => {
+    const t = e.target.closest(".tab");
+    if (!t) return;
+    genreGroup = t.dataset.group;
+    renderGenres();
+  });
+
+  // 扇と凡例のどちらに触れても同じ行が立つようにする
+  $("donut").addEventListener("mouseover", e => {
+    const s = e.target.closest(".donut-seg");
+    if (s) hotGenre(Number(s.dataset.i));
+  });
+  $("donut").addEventListener("mouseleave", () => hotGenre(null));
+  $("legend").addEventListener("mouseover", e => {
+    const li = e.target.closest("li[data-i]");
+    if (li) hotGenre(Number(li.dataset.i));
+  });
+  $("legend").addEventListener("mouseleave", () => hotGenre(null));
+
+  $("unclassified").addEventListener("click", e => {
+    const btn = e.target.closest("#fetch-ndc");
+    if (btn) fetchMissingNDC(btn);
+  });
+  $("unclassified").addEventListener("change", e => {
+    if (!e.target.classList.contains("js-genre")) return;
+    const row = e.target.closest(".uc-row");
+    const book = books.find(b => b.id === row.dataset.id);
+    if (!book || !e.target.value) return;
+    book.genre = e.target.value;
+    save(); render();
+  });
 
   $("clear-sample").addEventListener("click", () => {
     books = books.filter(b => !b.sample);
