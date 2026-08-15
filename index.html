@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>積読と進捗</title>
+<title>積読と進捗 — 積んだ本の量が見える読書管理ツール</title>
+<meta name="description" content="読みかけの本と残りページを把握する読書管理ツール。未読の本を「厚み＝ページ数」の背表紙として積み上げて表示するので、積読の総量が一目で分かります。本の裏のバーコードを読むと書名・著者・総ページ数が入ります。HTMLファイル1枚で動き、記録は端末の中だけに保存されます。">
+<link rel="canonical" href="https://kennyfujita.github.io/tools/tsundoku/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kennyfujita.github.io/tools/tsundoku/">
+<meta property="og:title" content="積読と進捗 — 積んだ本の量が見える読書管理ツール">
+<meta property="og:description" content="未読の本を「厚み＝ページ数」の背表紙として積み上げて表示する読書管理ツール。バーコードを読めば書名・著者・総ページ数が入り、読むペースから読了予想日が出ます。">
+<meta property="og:locale" content="ja_JP">
 <style>
   /* 独自パレット。サイト本体の assets/style.css とは意図的に切り離してある。
      このファイル1枚で完結させ、保存してどこで開いても同じ見た目になるようにするため。 */
@@ -259,6 +265,15 @@
     text-align: center; padding: 44px 20px;
     border: 1px dashed var(--rule); border-radius: 3px; line-height: 2;
   }
+  .empty button { margin-top: 14px; font-family: var(--sans); }
+
+  .sample-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin: 0; padding: 10px 14px;
+    font-size: 12.5px; color: var(--ink-2);
+    background: var(--accent-dim); border-radius: 3px;
+  }
+  .sample-bar[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -335,6 +350,11 @@
       <option value="title">書名順</option>
     </select>
   </div>
+
+  <p class="sample-bar" id="sample-bar" hidden>
+    お試し用のサンプルが入っています。
+    <button type="button" id="clear-sample">サンプルを消す</button>
+  </p>
 
   <div class="shelf" id="shelf"></div>
 
@@ -529,7 +549,9 @@
     const list = sortBooks(filter === "all" ? books : books.filter(b => b.status === filter));
 
     if (!books.length) {
-      el.innerHTML = `<p class="empty">まだ一冊も登録されていません。<br>上の「本を追加する」から積んでください。</p>`;
+      el.innerHTML = `<p class="empty">まだ一冊も登録されていません。<br>
+        上の「本を追加する」から積んでください。<br>
+        <button type="button" class="primary" id="seed-sample">サンプルを入れて試す</button></p>`;
       return;
     }
     if (!list.length) { el.innerHTML = `<p class="empty">この状態の本はありません。</p>`; return; }
@@ -562,7 +584,36 @@
     `).join("");
   }
 
-  function render() { renderFigures(); renderPile(); renderTabs(); renderShelf(); }
+  function render() {
+    renderFigures(); renderPile(); renderTabs(); renderShelf();
+    $("sample-bar").hidden = !books.some(b => b.sample);
+  }
+
+  /* ---------- サンプル ---------- */
+  // 初めて来た人は空の画面では何も分からないので、山・ペース・読了が
+  // 一通り出る状態を作って見せる。sample 印を付けてまとめて消せるようにする。
+  function addSample() {
+    const d = n => shiftDays(today(), n);
+    const now = new Date().toISOString();
+    books.push(
+      { id: "sample-a", title: "思考の整理学", author: "外山滋比古", isbn: "", pages: 223,
+        current: 0, status: "stack", due: "", added: now, finished: null,
+        log: [{ date: d(-18), page: 0 }], sample: true },
+
+      { id: "sample-b", title: "ゲーデル、エッシャー、バッハ", author: "ダグラス・ホフスタッター", isbn: "", pages: 768,
+        current: 0, status: "stack", due: "", added: now, finished: null,
+        log: [{ date: d(-30), page: 0 }], sample: true },
+
+      { id: "sample-c", title: "銃・病原菌・鉄 上", author: "ジャレド・ダイアモンド", isbn: "", pages: 415,
+        current: 180, status: "reading", due: d(8), added: now, finished: null,
+        log: [{ date: d(-12), page: 0 }, { date: d(-6), page: 90 }, { date: d(0), page: 180 }], sample: true },
+
+      { id: "sample-d", title: "夜と霧", author: "ヴィクトール・E・フランクル", isbn: "", pages: 169,
+        current: 169, status: "done", due: "", added: now, finished: d(-2),
+        log: [{ date: d(-9), page: 0 }, { date: d(-2), page: 169 }], sample: true }
+    );
+    save(); render();
+  }
 
   /* ---------- 記録 ---------- */
   function recordPage(book, page) {
@@ -852,7 +903,15 @@
 
   $("sort").addEventListener("change", renderShelf);
 
+  $("clear-sample").addEventListener("click", () => {
+    books = books.filter(b => !b.sample);
+    save(); render();
+  });
+
   $("shelf").addEventListener("click", e => {
+    // 空状態のボタンは再描画のたびに作り直されるので、ここで受ける
+    if (e.target.closest("#seed-sample")) { addSample(); return; }
+
     const card = e.target.closest(".book");
     if (!card) return;
     const book = books.find(b => b.id === card.dataset.id);
