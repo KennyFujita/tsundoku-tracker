@@ -3,7 +3,7 @@
 読みかけの本が何冊あって、あとどれだけ残っているかを把握するための道具。
 HTML ファイル1枚で動く。ビルド工程も外部ライブラリもサーバーも要らない。
 
-<https://kennyfujita.github.io/tools/tsundoku/>
+<https://kennyfujita.github.io/tsundoku-tracker/>
 
 ## できること
 
@@ -100,24 +100,6 @@ localStorage は**ブラウザの閲覧データを削除すると消える**。
 
 ## ライセンス
 
-MIT License
+MIT License — 全文は [LICENSE](LICENSE) を参照。
 
 Copyright (c) 2026 Kento Fujita
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
